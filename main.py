@@ -173,7 +173,8 @@ class Game:
             return (1, False)
         else:
             self._clear(ph, pv)
-            if sum([0 if x == 1 else 1 for x in self.mask]) == self.mines:
+            uncovered = sum(0 if x == 1 else 1 for row in self.mask for x in row)
+            if uncovered == self.mines:
                 # we won!
                 return (1, True)
         return (0, None)
