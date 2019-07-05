@@ -161,7 +161,6 @@ class Game:
 
         if self.pristine:
             # try different setups until the first hit is guaranteed to be safe
-            print("initializing mines")
             while True:
                 self._initialize_mines()
                 if self.grid[pv][ph] != -1:
