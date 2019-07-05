@@ -87,8 +87,8 @@ class Game:
 
     def draw_unsolved(self):
         h, v = self.size
-        print('  ' + ''.join([str(x % 10) for x in range(h)]))
-        print('  ' + "-" * size[0])
+        print('  ' + ' '.join([str(x % 10) for x in range(h)]))
+        print('  ' + "-" * size[0] * 2)
         for iv in range(v):
             srow = "{} ".format(str(iv % 10))
             for ih in range(h):
@@ -105,6 +105,7 @@ class Game:
                         srow += str(self.grid[iv][ih])
                 else:
                     srow += "."
+                srow += " "  # so I can actually read it
 
             print(srow)
 
@@ -128,7 +129,7 @@ class Game:
 
         print('  ' + "-" * size[0])
 
-    def _clear(self, ph, pv, cleared=set()):
+    def _clear(self, ph, pv):
         try:
             self.mask[pv][ph] = 1
         except IndexError as e:
@@ -142,7 +143,7 @@ class Game:
             if self.mask[nv][nh] in [1, 2]:
                 # already uncovered or is a flag
                 continue
-            self._clear(nh, nv, cleared)
+            self._clear(nh, nv)
 
     def check(self, ph, pv):
         """
@@ -212,6 +213,8 @@ while True:
             else:
                 print("you lost")
             break
+        elif result == -1:
+            print("Invalid input with the check")
     elif cmd_type == "flag":
         game.flag(column, row)
     else:
