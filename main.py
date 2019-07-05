@@ -136,6 +136,7 @@ class Game:
             print(self.mask)
             print(str(e) + " ... {} x {}".format(ph, pv))
             raise
+
         if self.grid[pv][ph] > 0:
             # don't check anymore spots if we hit a spot that borders a mine
             return
@@ -172,7 +173,9 @@ class Game:
             return (1, False)
         else:
             self._clear(ph, pv)
-            # TODO check to see if the game is won here
+            if sum([0 if x == 1 else 1 for x in self.mask]) == self.mines:
+                # we won!
+                return (1, True)
         return (0, None)
 
     def flag(self, ph, pv):
