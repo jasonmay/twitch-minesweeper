@@ -219,6 +219,8 @@ while True:
         elif result == -1:
             print("Invalid input with the check")
     elif cmd_type == "flag":
-        game.flag(column, row)
+        result = game.flag(column, row)
+        if result == 0:
+            print("already done")
     else:
         print("?????")
