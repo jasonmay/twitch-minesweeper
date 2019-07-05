@@ -187,7 +187,7 @@ class Game:
 
         if self.mask[pv][ph] == 2:
             self.mask[pv][ph] = 0
-        if self.mask[pv][ph] == 0:
+        elif self.mask[pv][ph] == 0:
             self.mask[pv][ph] = 2
 
         return 1
