@@ -155,7 +155,7 @@ class Game:
         if not self.within_bounds(ph, pv):
             return (-1, None)
 
-        if self.mask[ph][pv] in [1, 2]:
+        if self.mask[pv][ph] in [1, 2]:
             # trying to check on a flag makes no sense
             return (0, None)
 
