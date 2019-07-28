@@ -1,54 +1,13 @@
 import curses
 import time
+import commands
 
 size = (25, 16)  # v, h
 
 
-class Command:
-    def __init__(self, interface_context):
-        self.interface_context = interface_context
-
-    @property
-    def key_commands(self):
-        raise NotImplementedError
-
-    def run(self):
-        raise NotImplementedError
-
-
-class MoveLeftCommand(Command):
-    key_commands = "h"
-
-    def run(self):
-        self.interface_context.move_left()
-
-
-class MoveDownCommand(Command):
-    key_commands = "j"
-
-    def run(self):
-        self.interface_context.move_down()
-
-
-class MoveUpCommand(Command):
-    key_commands = "k"
-
-    def run(self):
-        self.interface_context.move_up()
-
-
-class MoveRightCommand(Command):
-    key_commands = "l"
-
-    def run(self):
-        self.interface_context.move_right()
-
-
-class QuitCommand(Command):
-    key_commands = "q"
-
-    def run(self):
-        return ("quit", None)
+class RedrawContext:
+    must_redraw_grid = False
+    must_redraw_cursor = False
 
 
 class Interface:
@@ -56,15 +15,15 @@ class Interface:
     xcursor = 0
 
     command_registry = [
-        MoveUpCommand,
-        MoveDownCommand,
-        MoveRightCommand,
-        MoveLeftCommand,
-        QuitCommand,
+        commands.MoveUpCommand,
+        commands.MoveDownCommand,
+        commands.MoveRightCommand,
+        commands.MoveLeftCommand,
+        commands.QuitCommand,
     ]
 
-    def __init__(self, stdscr):
-        self.stdscr = stdscr
+    def __init__(self, screen):
+        self.screen = screen
 
         command_dispatch = {}
 
@@ -95,6 +54,8 @@ class Interface:
             if self.xcursor > 0:
                 self.xcursor -= 1
 
+        self.must_redraw_cursor = True
+
     def move_right(self, spaces=1):
         for space in range(spaces):
             if self.xcursor < size[1] - 1:
@@ -110,38 +71,47 @@ class Interface:
             if self.ycursor < size[0] - 1:
                 self.ycursor += 1
 
+    def draw_grid(self):
+        # TODO: (foo + 1) * 2 as a transform method?
+        self.screen.addstr(0, 0, " " + "-" * ((size[1] + 1) * 2))
+        for v in range(0, size[0]):
+            line = "| "
+            for h in range(0, size[1]):
+                line += ". "
+                # TODO
+            line += "|"
+            self.screen.addstr(v + 1, 0, line)
+
+        self.screen.addstr(size[0] + 1, 0, " " + "-" * ((size[1] + 1) * 2))
+
     def run(self):
-        # Clear screen
-
+        self.screen.nodelay(1)
+        last_key_input = None
+        redraw_context = None
         while True:
-            self.stdscr.clear()
+            if last_key_input != -1:
+                if not redraw_context or redraw_context.must_redraw_grid:
+                    self.screen.clear()
+                    self.draw_grid()
+                if not redraw_context or redraw_context.must_redraw_cursor:
+                    self.screen.move(self.ycursor + 1, (self.xcursor + 1) * 2)
 
-            # TODO: (foo + 1) * 2 as a transform method?
-            self.stdscr.addstr(0, 0, " " + "-" * ((size[1] + 1) * 2))
-            for v in range(0, size[0]):
-                line = "| "
-                for h in range(0, size[1]):
-                    line += ". "
-                    # TODO
-                line += "|"
-                self.stdscr.addstr(v + 1, 0, line)
+            key_input = self.screen.getch()
+            last_key_input = key_input
 
-            self.stdscr.addstr(size[0] + 1, 0, " " + "-" * ((size[1] + 1) * 2))
-            self.stdscr.move(self.ycursor + 1, (self.xcursor + 1) * 2)
-
-            key_input = self.stdscr.getch()
             # h j k l  y u b n  are directions
             if key_input in self.command_dispatch:
-                result = self.command_dispatch[key_input].run()
-                # self.stdscr.addstr(30, 0, str(result))
-                self.stdscr.refresh()
-                # time.sleep(1)
+                redraw_context = RedrawContext()
+                result = self.command_dispatch[key_input].run(redraw_context)
+                # self.screen.addstr(30, 0, str(key_input))
+                self.screen.refresh()
                 if result and result[0] == "quit":
                     break
+                # time.sleep(0.1)
 
 
-def main(stdscr):
-    interface = Interface(stdscr)
+def main(screen):
+    interface = Interface(screen)
     interface.run()
 
 
