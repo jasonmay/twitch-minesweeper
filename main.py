@@ -6,7 +6,7 @@ from random import sample
 import re
 
 mines = 40
-size = (16, 16) # h, v
+size = (16, 16)  # h, v
 
 
 # State: Uncovered, Covered, Mine
@@ -22,16 +22,7 @@ class Game:
 
     def neighbors(self, ph, pv, oob_cb=None):
         # all adjacent offsets of a mine
-        offsets = [
-            (-1, -1),
-            (-1,  1),
-            ( 1, -1),
-            ( 1,  1),
-            (-1,  0),
-            ( 1,  0),
-            ( 0, -1),
-            ( 0,  1),
-        ]
+        offsets = [(-1, -1), (-1, 1), (1, -1), (1, 1), (-1, 0), (1, 0), (0, -1), (0, 1)]
         for oh, ov in offsets:
             nh = ph + oh
             nv = pv + ov
@@ -40,7 +31,6 @@ class Game:
                     oob_cb(self, nh, nv)
                 continue
             yield (nh, nv)
-
 
     def _initialize_mines(self):
         h, v = self.size  # horizontal, vertical
@@ -87,8 +77,8 @@ class Game:
 
     def draw_unsolved(self):
         h, v = self.size
-        print('  ' + ' '.join([str(x % 10) for x in range(h)]))
-        print('  ' + "-" * size[0] * 2)
+        print("  " + " ".join([str(x % 10) for x in range(h)]))
+        print("  " + "-" * size[0] * 2)
         for iv in range(v):
             srow = "{} ".format(str(iv % 10))
             for ih in range(h):
@@ -111,8 +101,8 @@ class Game:
 
     def draw_solved(self):
         h, v = self.size
-        print('  ' + ''.join([str(x % 10) for x in range(h)]))
-        print('  ' + "-" * size[0])
+        print("  " + "".join([str(x % 10) for x in range(h)]))
+        print("  " + "-" * size[0])
 
         for iv in range(v):
             srow = "{} ".format(str(iv % 10))
@@ -127,7 +117,7 @@ class Game:
 
             # print(str(iv % 10) + ' ' + ''.join([" " if self.grid[iv][ih] == 0 else "X" if self.grid[iv][ih] == -1 else str(self.grid[iv][ih]) for ih in range(h)]))
 
-        print('  ' + "-" * size[0])
+        print("  " + "-" * size[0])
 
     def _clear(self, ph, pv):
         try:
@@ -193,34 +183,42 @@ class Game:
         return 1
 
 
-game = Game(mines, size)
-cmd_validation = re.compile('(flag|check)\s+(\d+)\s+(\d+)', re.I)
-while True:
-    game.draw_unsolved()
-    match_result = None
-    while not match_result:
-        print("Available commands:\nflag [column] [row]'\n'check [column] [row]'\n(example: check 0 12)")
-        cmd = raw_input("> ").strip()
-        match_result = cmd_validation.match(cmd)
-        if not match_result:
-            print("Invalid command!")
+def main():
+    game = Game(mines, size)
+    cmd_validation = re.compile("(flag|check)\s+(\d+)\s+(\d+)", re.I)
+    while True:
+        game.draw_unsolved()
+        match_result = None
+        while not match_result:
+            print(
+                "Available commands:\nflag [column] [row]'\n'check [column] [row]'\n(example: check 0 12)"
+            )
+            cmd = raw_input("> ").strip()
+            match_result = cmd_validation.match(cmd)
+            if not match_result:
+                print("Invalid command!")
 
-    cmd_type, scolumn, srow = match_result.groups()
-    column, row = int(scolumn), int(srow)
-    if cmd_type == "check":
-        result, rtype = game.check(column, row)
-        if result == 1:
-            game.draw_unsolved()  # show the final result before bailing
-            if rtype:
-                print("you won")
-            else:
-                print("you lost")
-            break
-        elif result == -1:
-            print("Invalid input with the check")
-    elif cmd_type == "flag":
-        result = game.flag(column, row)
-        if result == 0:
-            print("already done")
-    else:
-        print("?????")
+        cmd_type, scolumn, srow = match_result.groups()
+        column, row = int(scolumn), int(srow)
+        if cmd_type == "check":
+            result, rtype = game.check(column, row)
+            if result == 1:
+                if rtype:
+                    game.draw_unsolved()  # show the final result before bailing
+                    print("you won")
+                else:
+                    game.draw_solved()  # show the final result before bailing
+                    print("you lost")
+                break
+            elif result == -1:
+                print("Invalid input with the check")
+        elif cmd_type == "flag":
+            result = game.flag(column, row)
+            if result == 0:
+                print("already done")
+        else:
+            print("?????")
+
+
+if __name__ == "__main__":
+    main()

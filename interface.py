@@ -133,9 +133,9 @@ class Interface:
             # h j k l  y u b n  are directions
             if key_input in self.command_dispatch:
                 result = self.command_dispatch[key_input].run()
-                self.stdscr.addstr(30, 0, str(result))
+                # self.stdscr.addstr(30, 0, str(result))
                 self.stdscr.refresh()
-                time.sleep(1)
+                # time.sleep(1)
                 if result and result[0] == "quit":
                     break
 
