@@ -2,6 +2,12 @@ import curses
 import time
 import commands
 
+import os
+import inspect
+import re
+from importlib import import_module
+from pathlib import Path
+
 size = (25, 16)  # v, h
 
 
@@ -14,17 +20,10 @@ class Interface:
     ycursor = 0
     xcursor = 0
 
-    command_registry = [
-        commands.MoveUpCommand,
-        commands.MoveDownCommand,
-        commands.MoveRightCommand,
-        commands.MoveLeftCommand,
-        commands.QuitCommand,
-    ]
-
     def __init__(self, screen):
         self.screen = screen
 
+        self.command_registry = self._build_command_registry()
         command_dispatch = {}
 
         for command_class in self.command_registry:
@@ -48,6 +47,30 @@ class Interface:
                 command_dispatch[key_command] = command_instance
 
         self.command_dispatch = command_dispatch
+
+    def _build_command_registry(self):
+        registry = []
+        for p_filename in Path('commands').glob('**/*.py'):
+            filename = str(p_filename)
+            if not os.path.isfile(filename):
+                continue
+
+            filename_parts = filename.split("/")
+            filename_parts[-1] = re.sub(r"\.py$", "", filename_parts[-1])
+            module_str = ".".join(filename_parts)
+            mod = import_module(module_str)
+            for mod_variable_str in dir(mod):
+                mod_variable = getattr(mod, mod_variable_str)
+                if not inspect.isclass(mod_variable):
+                    continue
+                if mod_variable == commands.Command:
+                    continue
+                if not issubclass(mod_variable, commands.Command):
+                    continue
+                registry.append(mod_variable)
+
+        return registry
+
 
     def move_left(self, spaces=1):
         for space in range(spaces):
