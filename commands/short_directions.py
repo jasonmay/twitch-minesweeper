@@ -31,3 +31,35 @@ class MoveRightCommand(Command):
     def run(self, redraw_context):
         self.interface_context.move_right()
         redraw_context.must_redraw_cursor = True
+
+
+class MoveUpLeftCommand(Command):
+    key_commands = "y"
+
+    def run(self, redraw_context):
+        self.interface_context.move(-1, -1)
+        redraw_context.must_redraw_cursor = True
+
+
+class MoveUpRightCommand(Command):
+    key_commands = "u"
+
+    def run(self, redraw_context):
+        self.interface_context.move(-1, 1)
+        redraw_context.must_redraw_cursor = True
+
+
+class MoveDownLeftCommand(Command):
+    key_commands = "b"
+
+    def run(self, redraw_context):
+        self.interface_context.move(1, -1)
+        redraw_context.must_redraw_cursor = True
+
+
+class MoveDownRightCommand(Command):
+    key_commands = "n"
+
+    def run(self, redraw_context):
+        self.interface_context.move(1, 1)
+        redraw_context.must_redraw_cursor = True

@@ -71,28 +71,44 @@ class Interface:
 
         return registry
 
+    def within_bounds(self, y, x):
+        if y < 0 or y >= size[0]:
+            return False
+        if x < 0 or x >= size[1]:
+            return False
+        return True
+
+    def move(self, y, x, times=1):
+        count = 0
+        new_y = self.ycursor
+        new_x = self.xcursor
+        while count < times:
+            new_y += y
+            new_x += x
+
+            if not self.within_bounds(new_y, new_x):
+                break
+
+            self.ycursor = new_y
+            self.xcursor = new_x
+
+            count += 1
+
+        if new_y != self.ycursor or new_x != self.xcursor:
+            self.must_redraw_cursor = True
+
 
     def move_left(self, spaces=1):
-        for space in range(spaces):
-            if self.xcursor > 0:
-                self.xcursor -= 1
-
-        self.must_redraw_cursor = True
+        self.move(0, -1, spaces)
 
     def move_right(self, spaces=1):
-        for space in range(spaces):
-            if self.xcursor < size[1] - 1:
-                self.xcursor += 1
+        self.move(0, 1, spaces)
 
     def move_up(self, spaces=1):
-        for space in range(spaces):
-            if self.ycursor > 0:
-                self.ycursor -= 1
+        self.move(-1, 0, spaces)
 
     def move_down(self, spaces=1):
-        for space in range(spaces):
-            if self.ycursor < size[0] - 1:
-                self.ycursor += 1
+        self.move(1, 0, spaces)
 
     def draw_grid(self):
         # TODO: (foo + 1) * 2 as a transform method?
