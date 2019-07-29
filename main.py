@@ -1,224 +1,158 @@
-# beginner: 8x8, 10 mines
-# intermediate: 16x16, 40 mines
-# expert: 24x24, 99 mines
+import curses
+import time
+import commands
 
-from random import sample
+import os
+import inspect
 import re
+from importlib import import_module
+from pathlib import Path
 
-mines = 40
-size = (16, 16)  # h, v
-
-
-# State: Uncovered, Covered, Mine
-# List[List[State]]
+size = (25, 16)  # v, h
 
 
-class Game:
-    grid = []
-    mask = []
-    size = None
-    mines = None
-    pristine = True
+class RedrawContext:
+    must_redraw_grid = False
+    must_redraw_cursor = False
 
-    def neighbors(self, ph, pv, oob_cb=None):
-        # all adjacent offsets of a mine
-        offsets = [(-1, -1), (-1, 1), (1, -1), (1, 1), (-1, 0), (1, 0), (0, -1), (0, 1)]
-        for oh, ov in offsets:
-            nh = ph + oh
-            nv = pv + ov
-            if not self.within_bounds(nh, nv):
-                if callable(oob_cb):
-                    oob_cb(self, nh, nv)
+
+class Interface:
+    ycursor = 0
+    xcursor = 0
+
+    def __init__(self, screen):
+        self.screen = screen
+
+        self.command_registry = self._build_command_registry()
+        command_dispatch = {}
+
+        for command_class in self.command_registry:
+            command_instance = command_class(self)
+            key_commands_raw = command_instance.key_commands
+            if type(key_commands_raw) is not list:
+                key_commands_raw = [key_commands_raw]
+
+            key_commands = []
+            for key_command in key_commands_raw:
+                if type(key_command) is str:
+                    key_commands.append(ord(key_command))
+                elif type(key_comand) is int:
+                    key_commands.append(key_command)
+                else:
+                    raise ValueError(
+                        "Key command format '{}' not supported".format(str(key_command))
+                    )
+
+            for key_command in key_commands:
+                command_dispatch[key_command] = command_instance
+
+        self.command_dispatch = command_dispatch
+
+    def _build_command_registry(self):
+        registry = []
+        for p_filename in Path('commands').glob('**/*.py'):
+            filename = str(p_filename)
+            if not os.path.isfile(filename):
                 continue
-            yield (nh, nv)
 
-    def _initialize_mines(self):
-        h, v = self.size  # horizontal, vertical
-        mine_choices_flat = sample(range(h * v), mines)
-        mine_choices = {(x % h, x / v): True for x in mine_choices_flat}
-
-        self.grid = []
-
-        for iv in range(v):
-            row = []
-            for ih in range(h):
-                row.append(-1 if mine_choices.get((ih, iv), False) else 0)
-            self.grid.append(row)
-
-        for ch, cv in mine_choices.keys():
-            # all adjacent offsets of a mine
-            for nh, nv in self.neighbors(ch, cv):
-                if self.grid[nv][nh] == -1:
-                    # neighboring piece is a mine
+            filename_parts = filename.split("/")
+            filename_parts[-1] = re.sub(r"\.py$", "", filename_parts[-1])
+            module_str = ".".join(filename_parts)
+            mod = import_module(module_str)
+            for mod_variable_str in dir(mod):
+                mod_variable = getattr(mod, mod_variable_str)
+                if not inspect.isclass(mod_variable):
                     continue
-                self.grid[nv][nh] += 1
+                if mod_variable == commands.Command:
+                    continue
+                if not issubclass(mod_variable, commands.Command):
+                    continue
+                registry.append(mod_variable)
 
-    def __init__(self, mines, size):
-        self.size = size
-        self.mines = mines
-        if mines >= size[0] * size[1]:
-            raise ValueError("Invalid input: can't fit all the mines in the grid")
+        return registry
 
-        h, v = size
-        self.mask = []
-        for iv in range(v):
-            mask_row = []
-            for ih in range(h):
-                mask_row.append(0)
-            self.mask.append(mask_row)
-
-    def within_bounds(self, ph, pv):
-        h, v = self.size
-        if ph < 0 or ph >= h:
+    def within_bounds(self, y, x):
+        if y < 0 or y >= size[0]:
             return False
-        if pv < 0 or pv >= v:
+        if x < 0 or x >= size[1]:
             return False
         return True
 
-    def draw_unsolved(self):
-        h, v = self.size
-        print("  " + " ".join([str(x % 10) for x in range(h)]))
-        print("  " + "-" * size[0] * 2)
-        for iv in range(v):
-            srow = "{} ".format(str(iv % 10))
-            for ih in range(h):
-                if self.mask[iv][ih] == 0:
-                    srow += "."
-                elif self.mask[iv][ih] == 2:
-                    srow += "F"
-                elif not self.pristine:
-                    if self.grid[iv][ih] == 0:
-                        srow += " "
-                    elif self.grid[iv][ih] == -1:
-                        srow += "X"
-                    else:
-                        srow += str(self.grid[iv][ih])
-                else:
-                    srow += "."
-                srow += " "  # so I can actually read it
+    def move(self, y, x, times=1):
+        count = 0
+        new_y = self.ycursor
+        new_x = self.xcursor
+        while count < times:
+            new_y += y
+            new_x += x
 
-            print(srow)
-
-    def draw_solved(self):
-        h, v = self.size
-        print("  " + "".join([str(x % 10) for x in range(h)]))
-        print("  " + "-" * size[0])
-
-        for iv in range(v):
-            srow = "{} ".format(str(iv % 10))
-            for ih in range(h):
-                if self.grid[iv][ih] == -1:
-                    srow += "X"
-                elif self.grid[iv][ih] == 0:
-                    srow += " "
-                else:
-                    srow += str(self.grid[iv][ih])
-            print(srow)
-
-            # print(str(iv % 10) + ' ' + ''.join([" " if self.grid[iv][ih] == 0 else "X" if self.grid[iv][ih] == -1 else str(self.grid[iv][ih]) for ih in range(h)]))
-
-        print("  " + "-" * size[0])
-
-    def _clear(self, ph, pv):
-        try:
-            self.mask[pv][ph] = 1
-        except IndexError as e:
-            print(self.mask)
-            print(str(e) + " ... {} x {}".format(ph, pv))
-            raise
-
-        if self.grid[pv][ph] > 0:
-            # don't check anymore spots if we hit a spot that borders a mine
-            return
-        for nh, nv in self.neighbors(ph, pv):
-            if self.mask[nv][nh] in [1, 2]:
-                # already uncovered or is a flag
-                continue
-            self._clear(nh, nv)
-
-    def check(self, ph, pv):
-        """
-        Returns tuple
-        First: -1 for error, 0 for continue as usual, 1 for game is over
-        Second: for 1 type, True for won, False for lost
-        """
-        if not self.within_bounds(ph, pv):
-            return (-1, None)
-
-        if self.mask[pv][ph] in [1, 2]:
-            # trying to check on a flag makes no sense
-            return (0, None)
-
-        if self.pristine:
-            # try different setups until the first hit is guaranteed to be safe
-            while True:
-                self._initialize_mines()
-                if self.grid[pv][ph] != -1:
-                    break
-            self.pristine = False
-
-        gval = self.grid[pv][ph]
-        if gval == -1:
-            return (1, False)
-        else:
-            self._clear(ph, pv)
-            uncovered = sum(0 if x == 1 else 1 for row in self.mask for x in row)
-            if uncovered == self.mines:
-                # we won!
-                return (1, True)
-        return (0, None)
-
-    def flag(self, ph, pv):
-        if not self.within_bounds(ph, pv):
-            return -1
-
-        if self.mask[pv][ph] == 1:
-            return 0
-
-        if self.mask[pv][ph] == 2:
-            self.mask[pv][ph] = 0
-        elif self.mask[pv][ph] == 0:
-            self.mask[pv][ph] = 2
-
-        return 1
-
-
-def main():
-    game = Game(mines, size)
-    cmd_validation = re.compile("(flag|check)\s+(\d+)\s+(\d+)", re.I)
-    while True:
-        game.draw_unsolved()
-        match_result = None
-        while not match_result:
-            print(
-                "Available commands:\nflag [column] [row]'\n'check [column] [row]'\n(example: check 0 12)"
-            )
-            cmd = raw_input("> ").strip()
-            match_result = cmd_validation.match(cmd)
-            if not match_result:
-                print("Invalid command!")
-
-        cmd_type, scolumn, srow = match_result.groups()
-        column, row = int(scolumn), int(srow)
-        if cmd_type == "check":
-            result, rtype = game.check(column, row)
-            if result == 1:
-                if rtype:
-                    game.draw_unsolved()  # show the final result before bailing
-                    print("you won")
-                else:
-                    game.draw_solved()  # show the final result before bailing
-                    print("you lost")
+            if not self.within_bounds(new_y, new_x):
                 break
-            elif result == -1:
-                print("Invalid input with the check")
-        elif cmd_type == "flag":
-            result = game.flag(column, row)
-            if result == 0:
-                print("already done")
-        else:
-            print("?????")
+
+            self.ycursor = new_y
+            self.xcursor = new_x
+
+            count += 1
+
+        if new_y != self.ycursor or new_x != self.xcursor:
+            self.must_redraw_cursor = True
+
+
+    def move_left(self, spaces=1):
+        self.move(0, -1, spaces)
+
+    def move_right(self, spaces=1):
+        self.move(0, 1, spaces)
+
+    def move_up(self, spaces=1):
+        self.move(-1, 0, spaces)
+
+    def move_down(self, spaces=1):
+        self.move(1, 0, spaces)
+
+    def draw_grid(self):
+        # TODO: (foo + 1) * 2 as a transform method?
+        self.screen.addstr(0, 0, " " + "-" * ((size[1] + 1) * 2))
+        for v in range(0, size[0]):
+            line = "| "
+            for h in range(0, size[1]):
+                line += ". "
+                # TODO
+            line += "|"
+            self.screen.addstr(v + 1, 0, line)
+
+        self.screen.addstr(size[0] + 1, 0, " " + "-" * ((size[1] + 1) * 2))
+
+    def run(self):
+        self.screen.nodelay(1)
+        last_key_input = None
+        redraw_context = None
+        while True:
+            if last_key_input != -1:
+                if not redraw_context or redraw_context.must_redraw_grid:
+                    self.screen.clear()
+                    self.draw_grid()
+                if not redraw_context or redraw_context.must_redraw_cursor:
+                    self.screen.move(self.ycursor + 1, (self.xcursor + 1) * 2)
+
+            key_input = self.screen.getch()
+            last_key_input = key_input
+
+            # h j k l  y u b n  are directions
+            if key_input in self.command_dispatch:
+                redraw_context = RedrawContext()
+                result = self.command_dispatch[key_input].run(redraw_context)
+                # self.screen.addstr(30, 0, str(key_input))
+                self.screen.refresh()
+                if result and result[0] == "quit":
+                    break
+                # time.sleep(0.1)
+
+
+def main(screen):
+    interface = Interface(screen)
+    interface.run()
 
 
 if __name__ == "__main__":
-    main()
+    curses.wrapper(main)
