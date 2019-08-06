@@ -1,0 +1,33 @@
+pypi
+reflection
+
+Cell in 2D array
+
+Cell has its own links for each direction - to not require access to grid?
+
+Initialize number of mines, etc
+
+Do not initialize grid yet on start
+
+Initialize grid on first check
+
+But then what about flag settings - is that separate?
+
+# Open question: how do I set flags without a grid when I don't have mines yet.
+
+## Idea:
+
+mines layer
+    logic
+
+flags layer
+    logic
+
+on init:
+    initialize flags layer
+
+on first check:
+    initialize mines layer
+
+which means:
+    pass in flags layer in every mine mutation!
