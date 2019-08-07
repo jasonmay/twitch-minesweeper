@@ -5,22 +5,24 @@ import inspect
 import os
 import re
 
-
-class RedrawContext:
-    must_redraw_grid = False
-    must_redraw_cursor = False
+from contexts.redraw import RedrawContext
+from contexts.mines import MineContext
 
 
 class Interface:
     ycursor = 0
     xcursor = 0
 
-    def __init__(self, screen, h, w):
+    def __init__(self, screen, h, w, mines):
         self.screen = screen
         self.size = (h, w)
 
         self.command_registry = self._build_command_registry()
         command_dispatch = {}
+
+        self.mines = mines
+        self.mines_layer = None
+        self.mine_context = MineContext(height=h, width=w)
 
         for command_class in self.command_registry:
             command_instance = command_class(self)
@@ -117,8 +119,18 @@ class Interface:
         for v in range(0, self.size[0]):
             line = "| "
             for h in range(0, self.size[1]):
+              if self.mines_layer:
+                cell =  self.mines_layer.cell_at(v, h)
+                if cell > 0:
+                  line += str(cell) + " "
+                elif cell == 0:
+                  line += ". "
+                elif cell == -1:
+                  line += "x "
+                else:
+                  line += "? "
+              else:
                 line += ". "
-                # TODO
             line += "|"
             self.screen.addstr(v + 1, 0, line)
 

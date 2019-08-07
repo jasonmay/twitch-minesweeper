@@ -6,7 +6,8 @@ from interface import Interface
 
 def main(screen):
     size = (25, 16)  # v, h
-    interface = Interface(screen, size[0], size[1])
+    mines = 10
+    interface = Interface(screen, size[0], size[1], mines)
     interface.run()
 
 

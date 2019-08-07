@@ -42,3 +42,6 @@ class Layer:
           continue
 
         yield (ny, nx)
+
+  def cell_at(self, y, x):
+    return self.cells[y][x]
