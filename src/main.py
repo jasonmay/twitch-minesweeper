@@ -50,12 +50,17 @@ class Interface:
 
     def _build_command_registry(self):
         registry = []
-        for p_filename in Path('commands').glob('**/*.py'):
+        for p_filename in Path('src/commands').glob('**/*.py'):
             filename = str(p_filename)
             if not os.path.isfile(filename):
                 continue
 
             filename_parts = filename.split("/")
+
+            # TODO find a better approach for python paths
+            if filename_parts[0] == "src":
+              filename_parts.pop(0)
+
             filename_parts[-1] = re.sub(r"\.py$", "", filename_parts[-1])
             module_str = ".".join(filename_parts)
             mod = import_module(module_str)

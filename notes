@@ -31,3 +31,8 @@ on first check:
 
 which means:
     pass in flags layer in every mine mutation!
+
+
+
+MineContext:
+    Provides a generator for mines
