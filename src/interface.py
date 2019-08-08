@@ -4,11 +4,17 @@ from pathlib import Path
 import inspect
 import os
 import re
+import logging
 
 from contexts.redraw import RedrawContext
 from contexts.mines import MineContext
 
 from layers.layer import Layer
+
+logger = logging.getLogger("minesweeper")
+logger.setLevel(logging.INFO)
+fh = logging.FileHandler("minesweeper.log")
+logger.addHandler(fh)
 
 
 class Interface:
@@ -26,7 +32,10 @@ class Interface:
         self.mines_layer = None
         self.mine_context = MineContext(height=height, width=width)
 
-        self.flags_layer = Layer(height=height, width=width)
+        # -1 = cleared, 0 = uncleared, 1 = flagged
+        self.coverage_layer = Layer(height=height, width=width, default=0)
+        # winning situation:
+        # len(!cleared) == self.mines
 
         for command_class in self.command_registry:
             command_instance = command_class(self)
@@ -124,8 +133,16 @@ class Interface:
             for h in range(0, self.size[1]):
                 if self.mines_layer:
                     cell = self.mines_layer.cell_at(v, h)
-                    if cell == 0:
+                    if coverage_cell == 0:
                         line += ". "
+                    elif coverage_cell == 1:
+                        line += "F "
+                    elif coverage_cell == -1:
+                        if cell == 0:
+                            line += ". "
+                        elif cell > 0:
+                            line += str(cell) + " "
+
                     # elif cell > 0:
                     #  line += str(cell) + " "
                     # elif cell == -1:
@@ -133,7 +150,14 @@ class Interface:
                     else:
                         line += "? "
                 else:
-                    line += ". "
+                    logger.debug("%d, %d", v, h)
+                    coverage_cell = self.coverage_layer.cell_at(v, h)
+                    if coverage_cell == 1:
+                        line += "F "
+                    elif coverage_cell == 0:
+                        line += ". "
+                    else:
+                        line += "? "
             line += "|"
             self.screen.addstr(v + 1, 0, line)
 
@@ -148,6 +172,7 @@ class Interface:
                 if not redraw_context or redraw_context.must_redraw_grid:
                     self.screen.clear()
                     self.draw_grid()
+                    self.screen.move(self.ycursor + 1, (self.xcursor + 1) * 2)
                 if not redraw_context or redraw_context.must_redraw_cursor:
                     self.screen.move(self.ycursor + 1, (self.xcursor + 1) * 2)
 
