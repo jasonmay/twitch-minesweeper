@@ -9,7 +9,7 @@ import logging
 from contexts.redraw import RedrawContext
 from contexts.mines import MineContext
 
-from layers.layer import Layer
+from layers.coverage import CoverageLayer
 
 logger = logging.getLogger("minesweeper")
 logger.setLevel(logging.INFO)
@@ -33,7 +33,7 @@ class Interface:
         self.mine_context = MineContext(height=height, width=width)
 
         # -1 = cleared, 0 = uncleared, 1 = flagged
-        self.coverage_layer = Layer(height=height, width=width, default=0)
+        self.coverage_layer = CoverageLayer(height=height, width=width, default=0)
         # winning situation:
         # len(!cleared) == self.mines
 
@@ -131,6 +131,7 @@ class Interface:
         for v in range(0, self.size[0]):
             line = "| "
             for h in range(0, self.size[1]):
+                coverage_cell = self.coverage_layer.cell_at(v, h)
                 if self.mines_layer:
                     cell = self.mines_layer.cell_at(v, h)
                     if coverage_cell == 0:
@@ -139,7 +140,7 @@ class Interface:
                         line += "F "
                     elif coverage_cell == -1:
                         if cell == 0:
-                            line += ". "
+                            line += "  "
                         elif cell > 0:
                             line += str(cell) + " "
 
@@ -150,8 +151,7 @@ class Interface:
                     else:
                         line += "? "
                 else:
-                    logger.debug("%d, %d", v, h)
-                    coverage_cell = self.coverage_layer.cell_at(v, h)
+                    # logger.debug("%d, %d", v, h)
                     if coverage_cell == 1:
                         line += "F "
                     elif coverage_cell == 0:
