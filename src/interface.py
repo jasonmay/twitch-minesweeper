@@ -8,21 +8,25 @@ import re
 from contexts.redraw import RedrawContext
 from contexts.mines import MineContext
 
+from layers.layer import Layer
+
 
 class Interface:
     ycursor = 0
     xcursor = 0
 
-    def __init__(self, screen, h, w, mines):
+    def __init__(self, screen, height, width, mines):
         self.screen = screen
-        self.size = (h, w)
+        self.size = (height, width)
 
         self.command_registry = self._build_command_registry()
         command_dispatch = {}
 
         self.mines = mines
         self.mines_layer = None
-        self.mine_context = MineContext(height=h, width=w)
+        self.mine_context = MineContext(height=height, width=width)
+
+        self.flags_layer = Layer(height=height, width=width)
 
         for command_class in self.command_registry:
             command_instance = command_class(self)
@@ -48,7 +52,7 @@ class Interface:
 
     def _build_command_registry(self):
         registry = []
-        for p_filename in Path('src/commands').glob('**/*.py'):
+        for p_filename in Path("src/commands").glob("**/*.py"):
             filename = str(p_filename)
             if not os.path.isfile(filename):
                 continue
@@ -57,7 +61,7 @@ class Interface:
 
             # TODO find a better approach for python paths
             if filename_parts[0] == "src":
-              filename_parts.pop(0)
+                filename_parts.pop(0)
 
             filename_parts[-1] = re.sub(r"\.py$", "", filename_parts[-1])
             module_str = ".".join(filename_parts)
@@ -100,7 +104,6 @@ class Interface:
         if new_y != self.ycursor or new_x != self.xcursor:
             self.must_redraw_cursor = True
 
-
     def move_left(self, spaces=1):
         self.move(0, -1, spaces)
 
@@ -119,18 +122,18 @@ class Interface:
         for v in range(0, self.size[0]):
             line = "| "
             for h in range(0, self.size[1]):
-              if self.mines_layer:
-                cell =  self.mines_layer.cell_at(v, h)
-                if cell > 0:
-                  line += str(cell) + " "
-                elif cell == 0:
-                  line += ". "
-                elif cell == -1:
-                  line += "x "
+                if self.mines_layer:
+                    cell = self.mines_layer.cell_at(v, h)
+                    if cell == 0:
+                        line += ". "
+                    # elif cell > 0:
+                    #  line += str(cell) + " "
+                    # elif cell == -1:
+                    #   line += "x "
+                    else:
+                        line += "? "
                 else:
-                  line += "? "
-              else:
-                line += ". "
+                    line += ". "
             line += "|"
             self.screen.addstr(v + 1, 0, line)
 
@@ -158,5 +161,3 @@ class Interface:
                 self.screen.refresh()
                 if result and result[0] == "quit":
                     break
-
-

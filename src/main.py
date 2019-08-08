@@ -2,8 +2,6 @@ import curses
 from interface import Interface
 
 
-
-
 def main(screen):
     size = (25, 16)  # v, h
     mines = 10
